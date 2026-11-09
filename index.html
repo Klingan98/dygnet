@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#24324D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dygnet">
+<title>Dygnet</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#24324D; --surface:#2E3F60; --raised:#384B70; --night:#33456A;
+  --text:#EEF2F8; --muted:#A3B0C9; --sun:#F4B942; --warn:#F28B82;
+  --font:"Bricolage Grotesque", ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-tap-highlight-color:transparent}
+body{min-height:100dvh;padding:calc(env(safe-area-inset-top,0px) + 18px) 18px calc(env(safe-area-inset-bottom,0px) + 32px)}
+main{max-width:480px;margin:0 auto}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+
+header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.date{font-size:1.1rem;font-weight:600}
+.header-right{display:flex;align-items:center;gap:12px;flex:none}
+.clock{color:var(--muted);font-variant-numeric:tabular-nums;font-size:1.1rem}
+.settings-btn{width:42px;height:42px;display:grid;place-items:center;border:1px solid var(--raised);border-radius:14px;background:var(--surface);color:var(--text)}
+.settings-btn svg{width:21px;height:21px}
+
+.dial{position:relative;width:min(86vw,340px);aspect-ratio:1;margin:14px auto 6px}
+.dial svg{width:100%;height:100%;display:block;overflow:visible}
+.hourlbl{fill:var(--muted);font:600 10px var(--font);text-anchor:middle;dominant-baseline:central}
+.center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
+.pct{font-size:clamp(2.6rem,13vw,3.6rem);font-weight:800;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.pct small{font-size:.42em;font-weight:600;margin-left:.15em}
+.sub{color:var(--muted);font-size:.8rem;margin-top:6px;max-width:180px;line-height:1.35}
+.left{margin-top:12px;color:var(--muted);font-size:.8rem;font-variant-numeric:tabular-nums;max-width:180px;line-height:1.35}
+
+.alloc{text-align:center;color:var(--muted);font-size:.85rem;min-height:1.2em}
+.alloc.over{color:var(--warn)}
+
+.tasks{list-style:none;margin-top:20px}
+.task{--c:#7FD1B9;display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;
+  padding:14px 14px 14px 16px;margin-top:10px;background:var(--surface);border-radius:20px;border:2px solid transparent;transition:border-color .2s}
+.task.active{border-color:var(--c);background:var(--raised)}
+.edit{background:none;border:none;text-align:left;display:block;width:100%;padding:2px 0}
+.tname{display:flex;align-items:center;gap:8px;font-weight:600;font-size:1.05rem}
+.tname i{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
+.tname em{font-style:normal;color:var(--muted);font-weight:400;font-size:.85rem;margin-left:auto;padding-left:8px;font-variant-numeric:tabular-nums}
+.bar{height:8px;background:var(--night);border-radius:4px;overflow:hidden;margin-top:9px}
+.bar b{display:block;height:100%;width:0;background:var(--c);border-radius:4px;transition:width .4s linear}
+.status{margin-top:7px;font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.task.active .status{color:var(--text);font-weight:600}
+.task.over .status{color:var(--warn)}
+.play{width:58px;height:58px;border-radius:50%;border:none;background:var(--c);color:#1D2940;display:grid;place-items:center;flex:none}
+.play svg{width:22px;height:22px}
+.task.done .play{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--c)}
+
+.add{display:block;width:100%;margin-top:14px;padding:16px;border-radius:20px;border:2px dashed var(--raised);background:none;color:var(--muted);font-weight:600;font-size:1rem}
+.empty{color:var(--muted);text-align:center;margin-top:22px;line-height:1.5;font-size:.95rem}
+
+dialog{margin:auto auto 0;width:100%;max-width:480px;border:none;border-radius:26px 26px 0 0;background:var(--surface);color:var(--text);
+  padding:22px 20px calc(env(safe-area-inset-bottom,0px) + 22px)}
+dialog::backdrop{background:rgba(15,22,38,.6)}
+dialog h2{font-size:1.25rem;font-weight:800;margin-bottom:16px}
+dialog label{display:block;font-size:.85rem;color:var(--muted);margin-top:12px}
+dialog input{display:block;width:100%;margin-top:6px;padding:13px 14px;border-radius:14px;border:2px solid var(--raised);background:var(--bg);color:var(--text);font:600 1.05rem var(--font)}
+dialog input:focus{outline:none;border-color:var(--sun)}
+.time-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.time-fields input{min-width:0;color-scheme:dark}
+.settings-note{color:var(--muted);font-size:.85rem;line-height:1.45;margin-top:14px}
+.form-error{color:var(--warn);font-size:.9rem;min-height:1.4em;margin-top:10px}
+.pctin{position:relative}
+.pctin span{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:600;margin-top:3px}
+.eq{margin-top:8px;font-size:.9rem;color:var(--text);min-height:1.3em;font-variant-numeric:tabular-nums}
+.colors{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.colors button{width:36px;height:36px;border-radius:50%;border:none;background:var(--sw)}
+.colors button[aria-pressed="true"]{box-shadow:0 0 0 3px var(--surface),0 0 0 5px var(--text)}
+.actions{display:flex;gap:10px;margin-top:22px}
+.actions button{flex:1;padding:14px;border-radius:14px;border:none;background:var(--raised);font-weight:600}
+.actions .primary{background:var(--sun);color:#1D2940}
+.actions .danger{background:none;color:var(--warn);flex:0 0 auto;padding:14px 8px}
+
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);transform:translate(-50%,calc(100% + 60px));visibility:hidden;background:var(--sun);color:#1D2940;
+  padding:14px 20px;border-radius:18px;font-weight:800;box-shadow:0 10px 30px rgba(0,0,0,.35);transition:transform .35s cubic-bezier(.2,1.4,.4,1);max-width:90vw;text-align:center;z-index:20}
+#toast.show{transform:translate(-50%,0);visibility:visible}
+#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:10}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="date" id="date"></div>
+    <div class="header-right">
+      <div class="clock" id="clock"></div>
+      <button class="settings-btn" id="settingsBtn" type="button" aria-label="Inställningar" title="Inställningar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/>
+          <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.07.07-1.86 1.86-.07-.07A1.7 1.7 0 0 0 16 18.4a1.7 1.7 0 0 0-1 .98l-.35.93h-2.63l-.35-.93a1.7 1.7 0 0 0-1-.98 1.7 1.7 0 0 0-1.88.34l-.07.07-1.86-1.86.07-.07A1.7 1.7 0 0 0 7.26 15a1.7 1.7 0 0 0-.98-1l-.93-.35v-2.63l.93-.35a1.7 1.7 0 0 0 .98-1 1.7 1.7 0 0 0-.34-1.88l-.07-.07 1.86-1.86.07.07A1.7 1.7 0 0 0 10.66 6a1.7 1.7 0 0 0 1-.98l.35-.93h2.63l.35.93a1.7 1.7 0 0 0 1 .98 1.7 1.7 0 0 0 1.88-.34l.07-.07 1.86 1.86-.07.07A1.7 1.7 0 0 0 19.4 9.4a1.7 1.7 0 0 0 .98 1l.93.35v2.63l-.93.35a1.7 1.7 0 0 0-.98 1Z" transform="translate(-1.4 -.8) scale(.94)"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="dial">
+    <svg viewBox="0 0 300 300" aria-hidden="true">
+      <g id="ticks"></g>
+      <g id="quotaRing" transform="rotate(-90 150 150)"></g>
+      <circle cx="150" cy="150" r="100" fill="none" style="stroke:var(--night)" stroke-width="30"/>
+      <circle id="elapsedArc" cx="150" cy="150" r="100" fill="none" style="stroke:var(--sun)" stroke-width="30"
+              pathLength="1000" stroke-dasharray="0 1000" transform="rotate(-90 150 150)"/>
+      <text class="hourlbl" id="hour0" x="150" y="6">10:00</text>
+      <text class="hourlbl" id="hour1" x="294" y="150">11:23</text>
+      <text class="hourlbl" id="hour2" x="150" y="294">12:45</text>
+      <text class="hourlbl" id="hour3" x="6" y="150">14:08</text>
+    </svg>
+    <div class="center" role="status" aria-live="off">
+      <div class="pct" id="pct">0<small>%</small></div>
+      <div class="sub" id="sessionLabel">av tiden 10:00–15:30 har gått</div>
+      <div class="left" id="left"></div>
+    </div>
+  </div>
+  <p class="alloc" id="alloc"></p>
+
+  <ul class="tasks" id="tasks"></ul>
+  <p class="empty" id="empty">Lägg till ett ärende och ge det en andel av dygnet, till exempel 5&nbsp;% för läsning.</p>
+  <button class="add" id="addBtn" type="button">+ Lägg till ärende</button>
+</main>
+
+<dialog id="sheet">
+  <form id="form" novalidate>
+    <h2 id="sheetTitle">Nytt ärende</h2>
+    <label for="fName">Namn</label>
+    <input id="fName" maxlength="40" autocomplete="off" placeholder="t.ex. Träning">
+    <label for="fPct">Andel av dygnet</label>
+    <div class="pctin"><input id="fPct" inputmode="decimal" autocomplete="off" placeholder="5"><span>%</span></div>
+    <p class="eq" id="fEq"></p>
+    <div class="colors" id="fColors" role="group" aria-label="Färg"></div>
+    <div class="actions">
+      <button type="button" class="danger" id="fDelete">Ta bort</button>
+      <button type="button" id="fCancel">Avbryt</button>
+      <button type="submit" class="primary">Spara</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="settingsSheet" aria-labelledby="settingsTitle">
+  <form id="settingsForm" novalidate>
+    <h2 id="settingsTitle">Inställningar</h2>
+    <p class="settings-note">Välj vilken del av dagen som ska vara ditt ”dygn”. 100 % motsvarar hela det valda intervallet.</p>
+    <div class="time-fields">
+      <div>
+        <label for="sStart">Starttid</label>
+        <input type="time" id="sStart" required step="60" value="10:00">
+      </div>
+      <div>
+        <label for="sEnd">Sluttid</label>
+        <input type="time" id="sEnd" required step="60" value="15:30">
+      </div>
+    </div>
+    <p id="sLength" class="eq"></p>
+    <p class="settings-note">Tiden för ärenden räknas endast inom intervallet. En ny dag startar vid starttiden. Dina val sparas på den här enheten.</p>
+    <p id="settingsError" class="form-error" role="alert"></p>
+    <div class="actions">
+      <button type="button" id="settingsCancel">Avbryt</button>
+      <button type="submit" class="primary">Spara</button>
+    </div>
+  </form>
+</dialog>
+
+<canvas id="fx" hidden></canvas>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  const KEY = 'dygnet-v1'; // Samma nyckel för att behålla befintliga ärenden.
+  const SCHEDULE_VERSION = 2;
+  const DEFAULT_SCHEDULE = { start: '10:00', end: '15:30' };
+  const PALETTE = ['#7FD1B9','#F28B82','#9FA8FF','#F6C28B','#C3A6E6','#8FD3F4','#B5D98A'];
+  const $ = s => document.querySelector(s);
+  const NS = 'http://www.w3.org/2000/svg';
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- tid ----------
+  const pad = n => String(n).padStart(2, '0');
+  const dayKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const timeMinutes = value => {
+    if (typeof value !== 'string' || !/^\d{2}:\d{2}$/.test(value)) return NaN;
+    const [h, m] = value.split(':').map(Number);
+    return h < 24 && m < 60 ? h * 60 + m : NaN;
+  };
+  const validSchedule = s => s && Number.isFinite(timeMinutes(s.start)) &&
+    Number.isFinite(timeMinutes(s.end)) && timeMinutes(s.end) > timeMinutes(s.start);
+  const scheduleMinutes = () => timeMinutes(state.schedule.end) - timeMinutes(state.schedule.start);
+  const dayDuration = () => scheduleMinutes() * 60000;
+  const timeLabel = minutes => `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+  // Passet börjar vid den valda starttiden. Före dess start gäller föregående pass.
+  const startOfDay = t => {
+    const d = new Date(t), m = timeMinutes(state.schedule.start);
+    d.setHours(Math.floor(m / 60), m % 60, 0, 0);
+    if (t < d.getTime()) d.setDate(d.getDate() - 1);
+    return d.getTime();
+  };
+  const endOfDay = t => {
+    const d = new Date(startOfDay(t)), m = timeMinutes(state.schedule.end);
+    d.setHours(Math.floor(m / 60), m % 60, 0, 0);
+    return d.getTime();
+  };
+  // Räknar bara tid i aktuellt pass, även om timern startats före passet.
+  const elapsedInDay = (from, to) => Math.max(0,
+    Math.min(to, endOfDay(to)) - Math.max(from, startOfDay(to)));
+  const num = (x, dec = 1) => x.toLocaleString('sv-SE', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  function hm(ms) {
+    const m = Math.round(Math.max(0, ms) / 60000), h = Math.floor(m / 60), r = m % 60;
+    return h ? (r ? `${h} h ${r} min` : `${h} h`) : `${r} min`;
+  }
+  function clock(ms) {
+    const s = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
+    return h ? `${h}:${pad(m)}:${pad(x)}` : `${m}:${pad(x)}`;
+  }
+
+  // ---------- data ----------
+  let state = null;
+  try { state = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+  const initialNow = Date.now();
+  const oldState = state && Array.isArray(state.tasks);
+  if (!oldState) state = { date: '', tasks: [], active: null };
+  if (!validSchedule(state.schedule)) state.schedule = { ...DEFAULT_SCHEDULE };
+  const sessionKey = now => dayKey(new Date(startOfDay(now)));
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+  if (state.scheduleVersion !== SCHEDULE_VERSION) {
+    // 24-timmarslogg kan inte föras över korrekt till den nya passlängden.
+    // Spara en kopia av den gamla datan, behåll ärendena men nollställ dagens tidsvärden.
+    if (oldState) {
+      try { if (!localStorage.getItem(KEY + '-backup-24h'))
+        localStorage.setItem(KEY + '-backup-24h', localStorage.getItem(KEY)); } catch (e) {}
+    }
+    state.tasks.forEach(t => { t.usedMs = 0; t.done = false; });
+    if (state.active) state.active.startedAt = initialNow;
+    state.date = sessionKey(initialNow);
+    state.scheduleVersion = SCHEDULE_VERSION;
+    save();
+  }
+  const find = id => state.tasks.find(t => t.id === id);
+  const quota = t => t.pct / 100 * dayDuration();
+  const used = (t, now) => t.usedMs + (state.active && state.active.id === t.id
+    ? elapsedInDay(state.active.startedAt, now) : 0);
+
+  function rollover(now) {
+    const k = sessionKey(now);
+    if (state.date === k) return false;
+    state.tasks.forEach(t => { t.usedMs = 0; t.done = false; });
+    if (state.active) state.active.startedAt = startOfDay(now); // aktiv timer följer nästa pass
+    state.date = k;
+    save();
+    return true;
+  }
+
+  function toggle(id) {
+    unlockAudio();
+    const now = Date.now();
+    if (rollover(now)) renderList();
+    const prev = state.active;
+    if (prev) {
+      const t = find(prev.id);
+      if (t) t.usedMs += elapsedInDay(prev.startedAt, now);
+      state.active = null;
+    }
+    if (!prev || prev.id !== id) state.active = { id, startedAt: now };
+    save();
+    renderList();
+    tick();
+  }
+
+  // ---------- urtavla ----------
+  const ticks = $('#ticks');
+  for (let h = 0; h < 24; h++) {
+    const a = h / 24 * 2 * Math.PI - Math.PI / 2, big = h % 6 === 0;
+    const r1 = 118, r2 = big ? 124 : 121;
+    const l = document.createElementNS(NS, 'line');
+    l.setAttribute('x1', 150 + r1 * Math.cos(a)); l.setAttribute('y1', 150 + r1 * Math.sin(a));
+    l.setAttribute('x2', 150 + r2 * Math.cos(a)); l.setAttribute('y2', 150 + r2 * Math.sin(a));
+    l.setAttribute('stroke', '#A3B0C9'); l.setAttribute('stroke-opacity', big ? .8 : .35);
+    l.setAttribute('stroke-width', big ? 2 : 1.2); l.setAttribute('stroke-linecap', 'round');
+    ticks.appendChild(l);
+  }
+
+  // Yttre ring: varje ärendes kvot som ett segment, fylls när tiden används
+  const ring = $('#quotaRing');
+  function renderRing() {
+    ring.replaceChildren();
+    let offset = 0;
+    for (const t of state.tasks) {
+      const len = Math.min(t.pct * 10, 1000 - offset);
+      if (len <= 0) break;
+      const gap = len > 8 ? 4 : 0;
+      for (const kind of ['bg', 'fg']) {
+        const c = document.createElementNS(NS, 'circle');
+        c.setAttribute('cx', 150); c.setAttribute('cy', 150); c.setAttribute('r', 136);
+        c.setAttribute('fill', 'none'); c.setAttribute('stroke', t.color); c.setAttribute('stroke-width', 9);
+        c.setAttribute('pathLength', 1000); c.setAttribute('stroke-dashoffset', -offset);
+        if (kind === 'bg') { c.setAttribute('stroke-opacity', .25); c.setAttribute('stroke-dasharray', `${len - gap} ${1000 - len + gap}`); }
+        else { c.dataset.ring = t.id; c.dataset.len = len - gap; c.setAttribute('stroke-dasharray', `0 1000`); }
+        ring.appendChild(c);
+      }
+      offset += len;
+    }
+  }
+
+  // ---------- lista ----------
+  const list = $('#tasks');
+  const PLAY = '<svg viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></svg>';
+  const PAUSE = '<svg viewBox="0 0 24 24"><rect x="5.5" y="4.5" width="4.5" height="15" rx="1.5" fill="currentColor"/><rect x="14" y="4.5" width="4.5" height="15" rx="1.5" fill="currentColor"/></svg>';
+
+  function renderList() {
+    list.replaceChildren();
+    for (const t of state.tasks) {
+      const li = document.createElement('li');
+      li.className = 'task';
+      li.dataset.id = t.id;
+      li.style.setProperty('--c', t.color);
+
+      const edit = document.createElement('button');
+      edit.type = 'button'; edit.className = 'edit'; edit.dataset.edit = t.id;
+      edit.setAttribute('aria-label', `Redigera ${t.name}`);
+      const name = document.createElement('div'); name.className = 'tname';
+      const dot = document.createElement('i');
+      const label = document.createElement('span'); label.textContent = t.name;
+      const pct = document.createElement('em'); pct.textContent = `${t.pct.toLocaleString('sv-SE', { maximumFractionDigits: 2 })} %`;
+      name.append(dot, label, pct);
+      const bar = document.createElement('div'); bar.className = 'bar'; bar.appendChild(document.createElement('b'));
+      const status = document.createElement('div'); status.className = 'status';
+      edit.append(name, bar, status);
+
+      const play = document.createElement('button');
+      play.type = 'button'; play.className = 'play'; play.dataset.toggle = t.id;
+      const on = state.active && state.active.id === t.id;
+      play.innerHTML = on ? PAUSE : PLAY;
+      play.setAttribute('aria-label', on ? `Pausa ${t.name}` : `Starta ${t.name}`);
+
+      li.append(edit, play);
+      list.appendChild(li);
+    }
+    $('#empty').hidden = state.tasks.length > 0;
+    renderRing();
+    const total = state.tasks.reduce((s, t) => s + t.pct, 0);
+    const alloc = $('#alloc');
+    alloc.classList.toggle('over', total > 100);
+    alloc.textContent = !state.tasks.length ? '' :
+      total > 100 ? `Kvoterna är ${num(total, 1)} % – mer än hela dygnet` :
+      `${num(total, 1)} % av dygnet är fördelat (${hm(total / 100 * dayDuration())})`;
+  }
+
+  list.addEventListener('click', e => {
+    const tg = e.target.closest('[data-toggle]');
+    if (tg) return toggle(tg.dataset.toggle);
+    const ed = e.target.closest('[data-edit]');
+    if (ed) openSheet(find(ed.dataset.edit));
+  });
+
+  // ---------- uppdatering varje sekund ----------
+  function tick() {
+    const now = Date.now();
+    if (rollover(now)) renderList();
+    const start = startOfDay(now), end = endOfDay(now);
+    const frac = Math.max(0, Math.min(1, (now - start) / (end - start)));
+    const d = new Date(now);
+
+    let dateStr = d.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' });
+    $('#date').textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+    $('#clock').textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    $('#pct').innerHTML = `${num(frac * 100, 1)}<small>%</small>`;
+    $('#left').textContent = now >= end
+      ? `Nästa dygn börjar kl ${state.schedule.start}`
+      : `${hm(end - now)} kvar till ${state.schedule.end}`;
+    $('#elapsedArc').setAttribute('stroke-dasharray', `${frac * 1000} 1000`);
+
+    for (const t of state.tasks) {
+      const u = used(t, now), q = quota(t), f = q ? u / q : 0;
+      const on = state.active && state.active.id === t.id;
+      const li = list.querySelector(`[data-id="${t.id}"]`);
+      if (li) {
+        li.classList.toggle('active', !!on);
+        li.classList.toggle('over', u > q);
+        li.classList.toggle('done', !!t.done);
+        li.querySelector('.bar b').style.width = `${Math.min(1, f) * 100}%`;
+        let s;
+        if (u > q) s = `${on ? '+' + clock(u - q) : '+' + hm(u - q)} över kvoten`;
+        else if (on) s = `${clock(q - u)} kvar av ${hm(q)}`;
+        else if (u === 0) s = `${hm(q)} att använda`;
+        else s = `${hm(u)} av ${hm(q)} använt`;
+        if (u >= q && !on && u - q < 30000) s = `Klar! ${hm(q)} använt 🎉`;
+        li.querySelector('.status').textContent = s;
+      }
+      const rc = ring.querySelector(`[data-ring="${t.id}"]`);
+      if (rc) rc.setAttribute('stroke-dasharray', `${Math.min(1, f) * rc.dataset.len} 1000`);
+
+      if (on && !t.done && u >= q) { t.done = true; save(); celebrate(t); }
+    }
+  }
+
+  // ---------- firande ----------
+  let actx = null;
+  function unlockAudio() {
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+    } catch (e) {}
+  }
+  function fanfare() {
+    if (!actx) return;
+    const notes = [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5];
+    const times = [0, .11, .22, .33, .52, .63];
+    const t0 = actx.currentTime + .05;
+    notes.forEach((f, i) => {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = 'triangle'; o.frequency.value = f;
+      const s = t0 + times[i], dur = i === notes.length - 1 ? .7 : .16;
+      g.gain.setValueAtTime(.0001, s);
+      g.gain.exponentialRampToValueAtTime(.28, s + .02);
+      g.gain.exponentialRampToValueAtTime(.0001, s + dur);
+      o.connect(g).connect(actx.destination);
+      o.start(s); o.stop(s + dur + .05);
+    });
+  }
+  function confetti(colors) {
+    const c = $('#fx'), ctx = c.getContext('2d'), dpr = window.devicePixelRatio || 1;
+    const W = innerWidth, H = innerHeight;
+    c.width = W * dpr; c.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.hidden = false;
+    const parts = Array.from({ length: 170 }, () => ({
+      x: W / 2 + (Math.random() - .5) * 80, y: H * .32,
+      vx: (Math.random() - .5) * 14, vy: -Math.random() * 13 - 5,
+      w: Math.random() * 7 + 5, rot: Math.random() * 6, vr: (Math.random() - .5) * .35,
+      col: colors[Math.floor(Math.random() * colors.length)]
+    }));
+    const t0 = performance.now(), DUR = 3400;
+    function frame(t) {
+      const el = t - t0;
+      ctx.clearRect(0, 0, W, H);
+      ctx.globalAlpha = Math.max(0, 1 - Math.max(0, el - 2200) / 1200);
+      for (const p of parts) {
+        p.vy += .32; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+        ctx.fillStyle = p.col; ctx.fillRect(-p.w / 2, -p.w / 4, p.w, p.w / 2);
+        ctx.restore();
+      }
+      if (el < DUR) requestAnimationFrame(frame);
+      else { ctx.clearRect(0, 0, W, H); c.hidden = true; }
+    }
+    requestAnimationFrame(frame);
+  }
+  let toastTimer;
+  function toast(msg) {
+    const el = $('#toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 4500);
+  }
+  function celebrate(t) {
+    toast(`🎉 Kvoten för ${t.name} är fylld!`);
+    fanfare();
+    if (navigator.vibrate) navigator.vibrate([90, 60, 90, 60, 260]);
+    if (!reduceMotion) confetti([t.color, '#F4B942', '#EEF2F8', ...PALETTE]);
+  }
+
+  // ---------- formulär ----------
+  const sheet = $('#sheet'), fName = $('#fName'), fPct = $('#fPct'), fEq = $('#fEq'), fColors = $('#fColors');
+  let editing = null, pickedColor = PALETTE[0];
+
+  PALETTE.forEach(col => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.style.setProperty('--sw', col); b.dataset.color = col;
+    b.setAttribute('aria-label', `Färg ${col}`);
+    fColors.appendChild(b);
+  });
+  fColors.addEventListener('click', e => {
+    const b = e.target.closest('[data-color]');
+    if (b) { pickedColor = b.dataset.color; markColor(); }
+  });
+  const markColor = () => fColors.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.color === pickedColor));
+  const parsePct = () => parseFloat(fPct.value.replace(',', '.').replace(/[^\d.]/g, ''));
+
+  function updateEq() {
+    const p = parsePct();
+    fEq.textContent = p > 0 && p <= 100 ? `= ${hm(p / 100 * dayDuration())} per dygn (${state.schedule.start}–${state.schedule.end})` : fPct.value ? 'Ange en siffra mellan 0 och 100' : '';
+  }
+  fPct.addEventListener('input', updateEq);
+
+  function openSheet(task) {
+    editing = task || null;
+    $('#sheetTitle').textContent = task ? 'Redigera ärende' : 'Nytt ärende';
+    fName.value = task ? task.name : '';
+    fPct.value = task ? String(task.pct).replace('.', ',') : '';
+    const usedColors = state.tasks.map(t => t.color);
+    pickedColor = task ? task.color : (PALETTE.find(c => !usedColors.includes(c)) || PALETTE[state.tasks.length % PALETTE.length]);
+    markColor(); updateEq();
+    $('#fDelete').hidden = !task;
+    sheet.showModal();
+    if (!task) setTimeout(() => fName.focus(), 50);
+  }
+
+  $('#addBtn').addEventListener('click', () => openSheet(null));
+  $('#fCancel').addEventListener('click', () => sheet.close());
+  sheet.addEventListener('click', e => { if (e.target === sheet) sheet.close(); });
+
+  $('#form').addEventListener('submit', e => {
+    e.preventDefault();
+    const name = fName.value.trim(), pct = parsePct();
+    if (!name) { fName.focus(); return; }
+    if (!(pct > 0 && pct <= 100)) { fPct.focus(); updateEq(); return; }
+    const p = Math.round(pct * 100) / 100;
+    if (editing) {
+      Object.assign(editing, { name, pct: p, color: pickedColor });
+      editing.done = used(editing, Date.now()) >= quota(editing);
+    } else {
+      state.tasks.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, pct: p, color: pickedColor, usedMs: 0, done: false });
+    }
+    save(); sheet.close(); renderList(); tick();
+  });
+
+  $('#fDelete').addEventListener('click', () => {
+    if (!editing || !confirm(`Ta bort "${editing.name}"?`)) return;
+    if (state.active && state.active.id === editing.id) state.active = null;
+    state.tasks = state.tasks.filter(t => t !== editing);
+    save(); sheet.close(); renderList(); tick();
+  });
+
+  // ---------- inställningar ----------
+  const settingsSheet = $('#settingsSheet'), sStart = $('#sStart'), sEnd = $('#sEnd');
+  const settingsError = $('#settingsError'), sLength = $('#sLength');
+  function renderSchedule() {
+    const start = timeMinutes(state.schedule.start), len = scheduleMinutes();
+    for (let i = 0; i < 4; i++) {
+      $('#hour' + i).textContent = timeLabel(Math.round(start + len * i / 4));
+    }
+    $('#sessionLabel').textContent = `av tiden ${state.schedule.start}–${state.schedule.end} har gått`;
+  }
+  function updateSettingsPreview() {
+    const s = { start: sStart.value, end: sEnd.value };
+    sLength.textContent = validSchedule(s) ? `Ditt dygn är ${hm((timeMinutes(s.end) - timeMinutes(s.start)) * 60000)} långt.` : '';
+    settingsError.textContent = '';
+  }
+  $('#settingsBtn').addEventListener('click', () => {
+    sStart.value = state.schedule.start;
+    sEnd.value = state.schedule.end;
+    updateSettingsPreview();
+    settingsSheet.showModal();
+  });
+  sStart.addEventListener('input', updateSettingsPreview);
+  sEnd.addEventListener('input', updateSettingsPreview);
+  $('#settingsCancel').addEventListener('click', () => settingsSheet.close());
+  settingsSheet.addEventListener('click', e => { if (e.target === settingsSheet) settingsSheet.close(); });
+  $('#settingsForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const next = { start: sStart.value, end: sEnd.value };
+    if (!validSchedule(next)) {
+      settingsError.textContent = 'Sluttiden måste vara senare än starttiden, samma dag.';
+      (Number.isFinite(timeMinutes(next.start)) ? sEnd : sStart).focus();
+      return;
+    }
+    const now = Date.now();
+    rollover(now);
+    // Bokför redan förbrukad tid enligt det gamla intervallet före ändringen.
+    if (state.active) {
+      const task = find(state.active.id);
+      if (task) task.usedMs += elapsedInDay(state.active.startedAt, now);
+    }
+    state.schedule = next;
+    // Om det nya intervallet innebär ett annat pass börjar det passets tid på noll.
+    rollover(now);
+    if (state.active) state.active.startedAt = now;
+    state.tasks.forEach(t => { t.done = t.usedMs >= quota(t); });
+    save();
+    renderSchedule(); renderList(); updateEq(); tick();
+    settingsSheet.close();
+    toast(`Tiderna är nu ${next.start}–${next.end}`);
+  });
+
+  // ---------- start ----------
+  rollover(Date.now());
+  renderSchedule();
+  renderList();
+  tick();
+  setInterval(tick, 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
